@@ -1,8 +1,9 @@
 from CDG import ChessDatabaseGenerator as cdg
-import sys
 import time
-from colorama import Fore
+from colorama import Fore, init
+init()
 import glob
+import sys
 
 def help():
     print(Fore.BLUE + "Chess Database Generator CLI:\n" + Fore.RESET)
