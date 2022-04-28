@@ -82,13 +82,21 @@ class ChessDatabaseGenerator:
         return database_file_content
 
 
-    def __write_file(self, file_name, content):
+    def __write_file(self, file_name, content, verbose=False):
+
+        if verbose:
+            print(Fore.RESET + f"\nWrite file: {file_name}... ", end="")
+
         # salvo le modifiche
         db_file = open(file_name, "w")
         db_file.write(content)
         db_file.close()
 
+        if verbose:
+            print(Fore.MAGENTA + "END" + Fore.RESET)
+
     def __read_check_file(self, check_file_name):
+
         check_file_content = '''
                                 {
                                     "n": 0,
@@ -144,7 +152,7 @@ class ChessDatabaseGenerator:
 
 
             # se richiesto faccio il backup del file prima di manipolarli
-            if backup:
+            if store and backup:
                 try:
 
                     database_backup_file_name = database_file_name[:database_file_name.index('.')] + ".backup." + database_file_name[
@@ -155,7 +163,7 @@ class ChessDatabaseGenerator:
                         print(f"Backup: {database_backup_file_name}... ", end="")
 
                     # salvo le modifiche
-                    self.__write_file(database_backup_file_name, json.dumps(self.database_file_content))
+                    self.__write_file(database_backup_file_name, json.dumps(self.database_file_content), verbose)
                     if verbose:
                         print(Fore.GREEN + "OK" + Fore.RESET)
 
@@ -166,7 +174,7 @@ class ChessDatabaseGenerator:
                     if verbose:
                         print(f"Backup: {check_backup_file_name}... ", end="")
 
-                    self.__write_file(check_backup_file_name, json.dumps(self.check_file_content))
+                    self.__write_file(check_backup_file_name, json.dumps(self.check_file_content), verbose)
 
                     if verbose:
                         print(Fore.GREEN + "OK" + Fore.RESET)
@@ -205,8 +213,8 @@ class ChessDatabaseGenerator:
 
             # salvo le modifiche
             if store:
-                self.__write_file(database_file_name, json.dumps(self.database_file_content))
-                self.__write_file(check_file_name, json.dumps(self.check_file_content))
+                self.__write_file(database_file_name, json.dumps(self.database_file_content), verbose)
+                self.__write_file(check_file_name, json.dumps(self.check_file_content), verbose)
 
         #except Exception as e:
         #    print("ERROR: ", e)

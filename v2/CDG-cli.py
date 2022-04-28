@@ -10,18 +10,17 @@ def help():
     message = '''CDG-cli.py [-flag] <value>
     
     flags:
-    -v <value> -> verbose (0, 1, 2); default 0
-    -a <path>-> all file .pgn in root
+    -v <level> -> verbose level (0, 1, 2); default 0
+    -a <path> -> loads all file .pgn in root
     -c <check_file_name> -> use sha control file
-    -i <input_file_name> -> input file
-    -h -> help
-    -b -> backup database
+    -i <input_file_name> -> loads only the input file
+    -h -> get help
+    -b -> backup database and check file each store
     
-    default value:
-    verbose = 0
-    backup = False
-    input_file_name = "input.pgn"
-    check_file_name = "check.json"'''
+    # Only for -a:
+    -l <value > 0> -> load database and check file each <value> add; 1: each add, ... 
+    -s <value > 0> -> store database and check file each <value> add; 1: each add, ... 
+'''
 
     print(message)
     print()
@@ -75,11 +74,15 @@ if __name__ == '__main__':
         index = 0
         l = len(glob.glob(path))
         for pgn_file in glob.glob(path):
+            index += 1
+
+            # TODO: verificare se effettuare il load database e check preventivo prima del ciclo in base a load
+            # TODO: if di controllo se fare lo store o il load
+
             cd.load_pgn(pgn_file, verbose)
             cd.store_games(check_file_name=check_file_name, verbose=verbose, backup=backup)
 
             if verbose:
-                index += 1
                 print()
                 if index == l:
                     print(Fore.GREEN + f"\nPNG File {index}/{l} - {round(100 * index / l, 2)}%" + Fore.RESET, end="")
