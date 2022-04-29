@@ -85,7 +85,7 @@ class ChessDatabaseGenerator:
     def __write_file(self, file_name, content, verbose=False):
 
         if verbose:
-            print(Fore.RESET + f"\nWrite file: {file_name}... ", end="")
+            print(Fore.RESET + f"Write file: {file_name}... ", end="")
 
         # salvo le modifiche
         db_file = open(file_name, "w")
@@ -115,6 +115,64 @@ class ChessDatabaseGenerator:
 
         return check_file_content
 
+    def backup(self, database_file_name="database.json", check_file_name="check.json", verbose=False):
+        try:
+
+            database_backup_file_name = database_file_name[
+                                        :database_file_name.index('.')] + ".backup." + database_file_name[
+                                                                                       database_file_name.index(
+                                                                                           '.') + 1:]
+
+            if verbose:
+                print(f"Backup: {database_backup_file_name}... ", end="")
+
+            # salvo le modifiche
+            self.__write_file(database_backup_file_name, json.dumps(self.database_file_content), False)
+            if verbose:
+                print(Fore.GREEN + "OK" + Fore.RESET)
+
+            check_backup_file_name = check_file_name[:check_file_name.index('.')] + ".backup." + check_file_name[
+                                                                                                 check_file_name.index(
+                                                                                                     '.') + 1:]
+
+            if verbose:
+                print(f"Backup: {check_backup_file_name}... ", end="")
+
+            self.__write_file(check_backup_file_name, json.dumps(self.check_file_content), False)
+
+            if verbose:
+                print(Fore.GREEN + "OK" + Fore.RESET)
+
+        except Exception as e:
+            if verbose:
+                print(Fore.RED + "ERROR: " + str(e) + Fore.RESET)
+
+    def store(self, database_file_name="database.json", check_file_name="check.json", verbose=False, backup=True):
+
+        try:
+            # se richiesto faccio il backup del file prima di manipolarli
+            if backup:
+                self.backup(database_file_name=database_file_name, check_file_name=check_file_name, verbose=verbose)
+
+            if verbose:
+                print(Fore.RESET + f"Store database in {database_file_name}... ", end="")
+
+            self.__write_file(database_file_name, json.dumps(self.database_file_content), False)
+
+            if verbose:
+                print(Fore.GREEN + "OK" + Fore.RESET)
+
+            if verbose:
+                print(Fore.RESET + f"Store check sha in {check_file_name}... ", end="")
+
+            self.__write_file(check_file_name, json.dumps(self.check_file_content), False)
+
+            if verbose:
+                print(Fore.GREEN + "OK" + Fore.RESET)
+
+        except Exception as e:
+            if verbose:
+                print(Fore.RED + "ERROR: " + str(e) + Fore.RESET)
 
     def __get_games(self):
 
@@ -153,45 +211,17 @@ class ChessDatabaseGenerator:
 
             # se richiesto faccio il backup del file prima di manipolarli
             if store and backup:
-                try:
-
-                    database_backup_file_name = database_file_name[:database_file_name.index('.')] + ".backup." + database_file_name[
-                                                                                      database_file_name.index(
-                                                                                          '.') + 1:]
-
-                    if verbose:
-                        print(f"Backup: {database_backup_file_name}... ", end="")
-
-                    # salvo le modifiche
-                    self.__write_file(database_backup_file_name, json.dumps(self.database_file_content), verbose)
-                    if verbose:
-                        print(Fore.GREEN + "OK" + Fore.RESET)
-
-
-                    check_backup_file_name = check_file_name[:check_file_name.index('.')] + ".backup." + check_file_name[
-                                                                                check_file_name.index('.') + 1:]
-
-                    if verbose:
-                        print(f"Backup: {check_backup_file_name}... ", end="")
-
-                    self.__write_file(check_backup_file_name, json.dumps(self.check_file_content), verbose)
-
-                    if verbose:
-                        print(Fore.GREEN + "OK" + Fore.RESET)
-
-                except Exception as e:
-                    if verbose:
-                        print(Fore.RED + "ERROR: " + str(e) + Fore.RESET)
+                self.backup(database_file_name=database_file_name, check_file_name=check_file_name, verbose=verbose)
 
 
             games = self.__get_games()
 
             index = 0
+            added = 0
             l = len(games)
             for game in games:
 
-                if verbose:
-                    index += 1
+                index += 1
 
                 sha_game = hashlib.sha256(game.replace(" ", "").encode()).hexdigest()
 
@@ -204,17 +234,20 @@ class ChessDatabaseGenerator:
                 self.check_file_content["sha"].append(sha_game)
                 self.check_file_content["n"] += 1
                 self.add_to_tree(self.__get_game_handle(game), self.database_file_content, verbose=verbose)
+                added += 1
 
                 if verbose:
                     if index == l:
-                        print(Fore.GREEN + f"{index}/{l} - {round(100 * index / l, 2)}%" + Fore.RESET, end="")
+                        print(Fore.GREEN + f"Add to tree... {index}/{l} - {round(100 * index / l, 2)}%" + Fore.RESET)
                     else:
-                        print(Fore.YELLOW + f"{index}/{l} - {round(100 * index / l, 2)}%" + Fore.RESET, end="\r\r")
+                        print(Fore.YELLOW + f"Add to tree... {index}/{l} - {round(100 * index / l, 2)}%" + Fore.RESET, end="\r\r")
 
             # salvo le modifiche
             if store:
-                self.__write_file(database_file_name, json.dumps(self.database_file_content), verbose)
-                self.__write_file(check_file_name, json.dumps(self.check_file_content), verbose)
+                self.store(database_file_name=database_file_name, check_file_name=check_file_name, verbose=verbose)
+
+
+            return added
 
         #except Exception as e:
         #    print("ERROR: ", e)
