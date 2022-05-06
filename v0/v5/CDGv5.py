@@ -170,6 +170,10 @@ class ChessDatabaseGenerator:
 
     def store(self, database_file_name="database.json", check_file_name="check.json", verbose=False, backup=True):
 
+        print(self.database_file_content)
+        print()
+        print(self.check_file_content)
+        !!!!!!!!!!!!!!!!!!!!!!!!!!
         try:
             # se richiesto faccio il backup del file prima di manipolarli
             if backup:

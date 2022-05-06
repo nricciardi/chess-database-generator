@@ -193,7 +193,9 @@ if __name__ == '__main__':
                     print(Fore.RED + "ERROR" + Fore.RESET)
 
             res = pool.starmap(cd.store_games, params)
-            print("res", res)
+            for r in res:
+                total_new_added += r
+
             # store database e check file manuale alla fine del ciclo con annesso backup
             cd.store(database_file_name=database_file_name, check_file_name=check_file_name, verbose=verbose)
 
