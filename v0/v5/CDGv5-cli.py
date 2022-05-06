@@ -1,5 +1,6 @@
 from CDGv5 import ChessDatabaseGenerator as cdg
 import time
+import multiprocessing
 from colorama import Fore, init
 init()
 import glob
@@ -31,9 +32,9 @@ def help():
     # Only for -a:
     -l <value > 0> -> load database and check file each <value> add; 0: never, 1: each add, ... 
     -s <value > 0> -> store database and check file each <value> add; 0: never, 1: each add, ...
-    -p -> enable multiprocessing
+    -p <core> -> enable multiprocessing on n core; -1 = cpu_core()
     
-    Database Chess Generator version 0.5.1
+    Database Chess Generator version 0.5.2
 '''
 
     print(message)
@@ -96,8 +97,11 @@ if __name__ == '__main__':
     # VERSIONE ALL
     elif '-a' in sys.argv:
         path = sys.argv[sys.argv.index('-a')+1] + "/*.pgn"
+        multiprocessing_option = 0
+        if '-p' in sys.argv:
+            multiprocessing_option = int(sys.argv[sys.argv.index('-p')+1])
 
-        cd = cdg()
+        cd = cdg(multiprocessing_option)
 
         # carico la prima volta i file
         cd.load_database(database_file_name=database_file_name, verbose=verbose)
@@ -110,39 +114,89 @@ if __name__ == '__main__':
             print("Loads all in the path: ", path)
             print(f"Loads database and check file each {load_value} file loaded")
             print(f"Store database and check file each {store_value} file loaded")
+            if multiprocessing_option:
+                print("Multiprocessing " + Fore.GREEN + "ON" + Fore.RESET)
 
-        for pgn_file in glob.glob(path):
-            index += 1
+        if not multiprocessing_option:      # multiprocessing off
+            for pgn_file in glob.glob(path):
+                index += 1
 
-            load = True
-            store = True
-
-            if load_value == 0:
-                load = False
-            elif index % load_value == 0:
                 load = True
-            else:
-                load = False
-
-            if store_value == 0:
-                store = False
-            elif index % store_value == 0:
                 store = True
-            else:
-                store = False
 
-            added = cd.store_games(pgn_file_name=pgn_file, mark=mark, database_file_name=database_file_name, check_file_name=check_file_name, verbose=verbose, backup=backup, load=load, store=store)
-            total_new_added += added
-
-            if verbose:
-                print(Fore.RESET + "\nAdded new " + Fore.BLUE + str(added) + Fore.RESET + " games")
-                if index == l:
-                    print(Fore.GREEN + f"\nPNG File done: {index}/{l} - {round(100 * index / l, 2)}%" + Fore.RESET, end="\n")
+                if load_value == 0:
+                    load = False
+                elif index % load_value == 0:
+                    load = True
                 else:
-                    print(Fore.LIGHTYELLOW_EX + f"PNG File done: {index}/{l} - {round(100 * index / l, 2)}%" + Fore.RESET, end="")
+                    load = False
 
-        # store database e check file manuale alla fine del ciclo con annesso backup
-        cd.store(database_file_name=database_file_name, check_file_name=check_file_name, verbose=verbose)
+                if store_value == 0:
+                    store = False
+                elif index % store_value == 0:
+                    store = True
+                else:
+                    store = False
+
+                added = cd.store_games(pgn_file_name=pgn_file, mark=mark, database_file_name=database_file_name, check_file_name=check_file_name, verbose=verbose, backup=backup, load=load, store=store)
+                total_new_added += added
+
+                if verbose:
+                    print(Fore.RESET + "\nAdded new " + Fore.BLUE + str(added) + Fore.RESET + " games")
+                    if index == l:
+                        print(Fore.GREEN + f"\nPNG File done: {index}/{l} - {round(100 * index / l, 2)}%" + Fore.RESET, end="\n")
+                    else:
+                        print(Fore.LIGHTYELLOW_EX + f"PNG File done: {index}/{l} - {round(100 * index / l, 2)}%" + Fore.RESET, end="")
+
+            # store database e check file manuale alla fine del ciclo con annesso backup
+            cd.store(database_file_name=database_file_name, check_file_name=check_file_name, verbose=verbose)
+
+        else:       # multiprocessing on
+            if multiprocessing_option <= 0:
+                pool = multiprocessing.Pool()
+            else:
+                pool = multiprocessing.Pool(multiprocessing_option)
+
+            params = []
+
+            try:
+                if verbose:
+                    print("Generate parameters for multiprocessing... ", end="")
+
+                count = 0
+                for pgn_file in glob.glob(path):
+
+                    load = False
+                    store = False
+
+                    if load_value == 0:
+                        load = False
+                    elif count % load_value == 0:
+                        load = True
+                    else:
+                        load = False
+
+                    if store_value == 0:
+                        store = False
+                    elif count % store_value == 0:
+                        store = True
+                    else:
+                        store = False
+
+                    params.append( (pgn_file, mark, database_file_name, check_file_name, verbose, backup, load, store) )
+
+                if verbose:
+                    print(Fore.GREEN + "OK" + Fore.RESET)
+
+            except Exception as e:
+                if verbose:
+                    print(Fore.RED + "ERROR" + Fore.RESET)
+
+            res = pool.starmap(cd.store_games, params)
+            print("res", res)
+            # store database e check file manuale alla fine del ciclo con annesso backup
+            cd.store(database_file_name=database_file_name, check_file_name=check_file_name, verbose=verbose)
+
 
     if verbose:
         end = time.time()

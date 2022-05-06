@@ -1,12 +1,14 @@
 import json
 import os
 import hashlib
+import multiprocessing
 from colorama import Fore
 
 class ChessDatabaseGenerator:
-    def __init__(self):
+    def __init__(self, multiprocessing_option=False):
         self.database_file_content = None
         self.check_file_content = None
+        self.multiprocessing_option = multiprocessing_option
         print(Fore.RESET, end="")
 
     def __del__(self):
@@ -17,7 +19,7 @@ class ChessDatabaseGenerator:
         pgn_file = None
 
         try:
-            if verbose:
+            if verbose and not self.multiprocessing_option:
                 print(Fore.RESET + f"\nLoad games from PGN file: {input_pgn_file_name}... ", end="")
 
 
@@ -25,22 +27,22 @@ class ChessDatabaseGenerator:
             pgn_file = file.read()
             file.close()
 
-            if verbose:
+            if verbose and not self.multiprocessing_option:
                 print(Fore.GREEN + "OK" + Fore.RESET)
 
             # se richiesto aggiungo il mark al file
             if mark:
 
-                if verbose:
+                if verbose and not self.multiprocessing_option:
                     print(Fore.RESET + f"Mark PGN file: {input_pgn_file_name}... ", end="")
 
                 os.rename(input_pgn_file_name, input_pgn_file_name + ".done")
 
-                if verbose:
+                if verbose and not self.multiprocessing_option:
                     print(Fore.GREEN + "OK" + Fore.RESET)
 
         except Exception as e:
-            if verbose:
+            if verbose and not self.multiprocessing_option:
                 print(Fore.RED + "ERROR" + Fore.RESET)
             return None
 
@@ -48,44 +50,47 @@ class ChessDatabaseGenerator:
 
     def load_database(self, database_file_name, verbose = False) -> bool:
         try:
-            if verbose:
+            if verbose and not self.multiprocessing_option:
                 print(Fore.RESET + f"\nLoad database: {database_file_name}... ", end="")
 
-            self.database_file_content = self.__read_database_file(database_file_name)
+            if self.multiprocessing_option:
+                self.database_file_content = multiprocessing.Manager().dict(self.__read_database_file(database_file_name))
+            else:
+                self.database_file_content = self.__read_database_file(database_file_name)
 
         except Exception as e:
-            if verbose:
+            if verbose and not self.multiprocessing_option:
                 print(Fore.RED + "ERROR" + Fore.RESET)
             return False
 
-        if verbose:
+        if verbose and not self.multiprocessing_option:
             print(Fore.GREEN + "OK" + Fore.RESET)
 
         return True
 
     def load_check_file(self, check_file_name, verbose = False) -> bool:
         try:
-            if verbose:
+            if verbose and not self.multiprocessing_option:
                 print(Fore.RESET + f"\nLoad check file: {check_file_name}... ", end="")
 
-
-            self.check_file_content = self.__read_check_file(check_file_name)
+            if self.multiprocessing_option:
+                self.check_file_content = multiprocessing.Manager().dict(self.__read_check_file(check_file_name))
+            else:
+                self.check_file_content = self.__read_check_file(check_file_name)
 
         except Exception as e:
-            if verbose:
+            if verbose and not self.multiprocessing_option:
                 print(Fore.RED + "ERROR" + Fore.RESET)
             return False
 
-        if verbose:
+        if verbose and not self.multiprocessing_option:
             print(Fore.GREEN + "OK" + Fore.RESET)
     
     def __read_database_file(self, database_file_name):
-        database_file_content = '''
-                                    { }
-                                    '''
+        database_file_content = {}
         try:
             if os.path.exists(database_file_name):
-                return json.load(database_file_name)
+                return json.load(open(database_file_name))
 
         except Exception as e:
             return database_file_content
@@ -93,33 +98,28 @@ class ChessDatabaseGenerator:
         return database_file_content
 
 
-    def __write_file(self, file_name, content, verbose=False, json_content=True):
+    def __write_file(self, file_name, content, verbose=False):
 
         if verbose:
             print(Fore.RESET + f"Write file: {file_name}... ", end="")
 
-        if json_content:
-            json.dump(content, file_name)
-        else:
-            # salvo le modifiche
-            db_file = open(file_name, "w")
-            db_file.write(content)
-            db_file.close()
+        # salvo le modifiche
+        db_file = open(file_name, "w")
+        db_file.write(content)
+        db_file.close()
 
         if verbose:
             print(Fore.MAGENTA + "END" + Fore.RESET)
 
     def __read_check_file(self, check_file_name):
 
-        check_file_content = '''
-                                {
+        check_file_content = {
                                     "n": 0,
                                     "sha": []
-                                }
-                                '''
+                             }
         try:
             if os.path.exists(check_file_name):
-                return json.load(check_file_name)
+                return json.load(open(check_file_name))
 
         except Exception as e:
             return check_file_content
@@ -138,7 +138,12 @@ class ChessDatabaseGenerator:
                 print(f"Backup: {database_backup_file_name}... ", end="")
 
             # salvo le modifiche
-            self.__write_file(database_backup_file_name, json.dumps(self.database_file_content), False)
+            if self.multiprocessing_option:
+                content = json.dumps(self.database_file_content.copy())
+            else:
+                content = json.dumps(self.database_file_content)
+
+            self.__write_file(file_name=database_backup_file_name, content=content, verbose=False)
             if verbose:
                 print(Fore.GREEN + "OK" + Fore.RESET)
 
@@ -149,7 +154,12 @@ class ChessDatabaseGenerator:
             if verbose:
                 print(f"Backup: {check_backup_file_name}... ", end="")
 
-            self.__write_file(check_backup_file_name, json.dumps(self.check_file_content), False)
+            if self.multiprocessing_option:
+                content = json.dumps(self.check_file_content.copy())
+            else:
+                content = json.dumps(self.check_file_content)
+
+            self.__write_file(check_backup_file_name, content, verbose=False)
 
             if verbose:
                 print(Fore.GREEN + "OK" + Fore.RESET)
@@ -168,7 +178,12 @@ class ChessDatabaseGenerator:
             if verbose:
                 print(Fore.RESET + f"Store database in {database_file_name}... ", end="")
 
-            self.__write_file(database_file_name, json.dumps(self.database_file_content), False)
+            if self.multiprocessing_option:
+                content = json.dumps(self.database_file_content.copy())
+            else:
+                content = json.dumps(self.database_file_content)
+
+            self.__write_file(database_file_name, content, False)
 
             if verbose:
                 print(Fore.GREEN + "OK" + Fore.RESET)
@@ -176,7 +191,12 @@ class ChessDatabaseGenerator:
             if verbose:
                 print(Fore.RESET + f"Store check sha in {check_file_name}... ", end="")
 
-            self.__write_file(check_file_name, json.dumps(self.check_file_content), False)
+            if self.multiprocessing_option:
+                content = json.dumps(self.check_file_content.copy())
+            else:
+                content = json.dumps(self.check_file_content)
+
+            self.__write_file(check_file_name, content, False)
 
             if verbose:
                 print(Fore.GREEN + "OK" + Fore.RESET)
@@ -247,7 +267,7 @@ class ChessDatabaseGenerator:
                 sha_game = hashlib.sha256(game.replace(" ", "").encode()).hexdigest()
 
                 if sha_game in self.check_file_content["sha"]:
-                    if verbose:
+                    if verbose and not self.multiprocessing_option:
                         print(Fore.RED + f"{sha_game} is already in the database"  + Fore.RESET, end="")
                         print(f" ({index}/{l} - {round(100 * (index) / l, 2)}%)" + Fore.RESET)
                     continue
@@ -257,7 +277,7 @@ class ChessDatabaseGenerator:
                 self.add_to_tree(self.__get_game_handle(game), self.database_file_content, verbose=verbose)
                 added += 1
 
-                if verbose:
+                if verbose and not self.multiprocessing_option:
                     if index == l:
                         print(Fore.GREEN + f"Add to tree... {index}/{l} - {round(100 * index / l, 2)}%" + Fore.RESET)
                     else:
@@ -267,6 +287,8 @@ class ChessDatabaseGenerator:
             if store:
                 self.store(database_file_name=database_file_name, check_file_name=check_file_name, verbose=verbose)
 
+            if self.multiprocessing_option and verbose:
+                print(Fore.RESET + "\nAdded new " + Fore.BLUE + str(added) + Fore.RESET + " games")
 
             return added
 
@@ -329,7 +351,7 @@ class ChessDatabaseGenerator:
             return
         else:
 
-            if verbose == 2:
+            if verbose == 2 and not self.multiprocessing_option:
                 print(f'{lv + 1}/{len(game["moves"])} (move: {game["moves"][lv]})')
 
             # controllo se c'è una mossa nell'albero delle mosse che sia uguale a quella giocata
