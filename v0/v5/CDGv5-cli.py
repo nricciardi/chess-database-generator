@@ -31,8 +31,9 @@ def help():
     # Only for -a:
     -l <value > 0> -> load database and check file each <value> add; 0: never, 1: each add, ... 
     -s <value > 0> -> store database and check file each <value> add; 0: never, 1: each add, ...
+    -p -> enable multiprocessing
     
-    Database Chess Genetor version 0.5.0
+    Database Chess Generator version 0.5.1
 '''
 
     print(message)
@@ -83,15 +84,14 @@ if __name__ == '__main__':
         print("Check file: ", check_file_name)
         print("Backup: ", backup)
 
-
+    total_new_added = 0
     if '-i' in sys.argv:
         if verbose:
             print("Input file: ", input_file_name, end="\n")
 
 
         cd = cdg()
-        cd.load_pgn(input_file_name, mark, verbose)
-        cd.store_games(database_file_name=database_file_name, check_file_name=check_file_name, verbose=verbose, backup=backup)
+        cd.store_games(pgn_file_name=input_file_name, mark=mark, database_file_name=database_file_name, check_file_name=check_file_name, verbose=verbose, backup=backup)
 
     # VERSIONE ALL
     elif '-a' in sys.argv:
@@ -131,8 +131,7 @@ if __name__ == '__main__':
             else:
                 store = False
 
-            cd.load_pgn(pgn_file, mark, verbose)
-            added = cd.store_games(database_file_name=database_file_name, check_file_name=check_file_name, verbose=verbose, backup=backup, load=load, store=store)
+            added = cd.store_games(pgn_file_name=pgn_file, mark=mark, database_file_name=database_file_name, check_file_name=check_file_name, verbose=verbose, backup=backup, load=load, store=store)
             total_new_added += added
 
             if verbose:

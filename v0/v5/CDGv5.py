@@ -12,14 +12,17 @@ class ChessDatabaseGenerator:
     def __del__(self):
         print(Fore.RESET, end="")
 
-    def load_pgn(self, input_pgn_file_name, mark=False, verbose=False) -> bool:
+    def __load_pgn(self, input_pgn_file_name, mark=False, verbose=False):
+
+        pgn_file = None
+
         try:
             if verbose:
                 print(Fore.RESET + f"\nLoad games from PGN file: {input_pgn_file_name}... ", end="")
 
 
             file = open(input_pgn_file_name, "r")
-            self.pgn_file = file.read()
+            pgn_file = file.read()
             file.close()
 
             if verbose:
@@ -39,9 +42,9 @@ class ChessDatabaseGenerator:
         except Exception as e:
             if verbose:
                 print(Fore.RED + "ERROR" + Fore.RESET)
-            return False
+            return None
 
-        return True
+        return pgn_file
 
     def load_database(self, database_file_name, verbose = False) -> bool:
         try:
@@ -182,13 +185,13 @@ class ChessDatabaseGenerator:
             if verbose:
                 print(Fore.RED + "ERROR: " + str(e) + Fore.RESET)
 
-    def __get_games(self):
+    def __get_games(self, pgn_file):
 
         games = []
         game = ''
         append = False
 
-        for row in self.pgn_file.split("\n"):
+        for row in pgn_file.split("\n"):
             if '[' in row:  # salto se la riga contiente [, ossia informazioni sulla partita
                 continue
 
@@ -210,8 +213,18 @@ class ChessDatabaseGenerator:
 
         return games
 
-    def store_games(self, database_file_name="database.json", check_file_name="check.json", verbose=0, backup=False, load=True, store=True):
+    def store_games(self, pgn_file_name, mark=False, database_file_name="database.json", check_file_name="check.json", verbose=0, backup=False, load=True, store=True):
         #try:
+
+            # recupera il file pgn
+            pgn_file = self.__load_pgn(input_pgn_file_name=pgn_file_name, mark=mark, verbose=verbose)
+
+            if pgn_file == None:
+                if verbose:
+                    print(Fore.RED + "Error while opening the file" + Fore.RESET)
+
+                return None
+
             if load:
                 self.load_database(database_file_name)
                 self.load_check_file(check_file_name)
@@ -222,7 +235,7 @@ class ChessDatabaseGenerator:
                 self.backup(database_file_name=database_file_name, check_file_name=check_file_name, verbose=verbose)
 
 
-            games = self.__get_games()
+            games = self.__get_games(pgn_file)
 
             index = 0
             added = 0
