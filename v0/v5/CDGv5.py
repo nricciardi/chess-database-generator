@@ -12,7 +12,7 @@ class ChessDatabaseGenerator:
     def __del__(self):
         print(Fore.RESET, end="")
 
-    def load_pgn(self, input_pgn_file_name, verbose = False) -> bool:
+    def load_pgn(self, input_pgn_file_name, mark=False, verbose=False) -> bool:
         try:
             if verbose:
                 print(Fore.RESET + f"\nLoad games from PGN file: {input_pgn_file_name}... ", end="")
@@ -22,13 +22,24 @@ class ChessDatabaseGenerator:
             self.pgn_file = file.read()
             file.close()
 
+            if verbose:
+                print(Fore.GREEN + "OK" + Fore.RESET)
+
+            # se richiesto aggiungo il mark al file
+            if mark:
+
+                if verbose:
+                    print(Fore.RESET + f"Mark PGN file: {input_pgn_file_name}... ", end="")
+
+                os.rename(input_pgn_file_name, input_pgn_file_name + ".done")
+
+                if verbose:
+                    print(Fore.GREEN + "OK" + Fore.RESET)
+
         except Exception as e:
             if verbose:
                 print(Fore.RED + "ERROR" + Fore.RESET)
             return False
-
-        if verbose:
-            print(Fore.GREEN + "OK" + Fore.RESET)
 
         return True
 
@@ -69,28 +80,28 @@ class ChessDatabaseGenerator:
         database_file_content = '''
                                     { }
                                     '''
+        try:
+            if os.path.exists(database_file_name):
+                return json.load(database_file_name)
 
-        if os.path.exists(database_file_name):
-            db_file = open(database_file_name, "r")
-            _database_file_content = db_file.read()
-            if _database_file_content.strip() != "":
-                database_file_content = _database_file_content
-            db_file.close()
-
-        database_file_content = json.loads(database_file_content)
+        except Exception as e:
+            return database_file_content
 
         return database_file_content
 
 
-    def __write_file(self, file_name, content, verbose=False):
+    def __write_file(self, file_name, content, verbose=False, json_content=True):
 
         if verbose:
             print(Fore.RESET + f"Write file: {file_name}... ", end="")
 
-        # salvo le modifiche
-        db_file = open(file_name, "w")
-        db_file.write(content)
-        db_file.close()
+        if json_content:
+            json.dump(content, file_name)
+        else:
+            # salvo le modifiche
+            db_file = open(file_name, "w")
+            db_file.write(content)
+            db_file.close()
 
         if verbose:
             print(Fore.MAGENTA + "END" + Fore.RESET)
@@ -103,15 +114,12 @@ class ChessDatabaseGenerator:
                                     "sha": []
                                 }
                                 '''
+        try:
+            if os.path.exists(check_file_name):
+                return json.load(check_file_name)
 
-        if os.path.exists(check_file_name):
-            check_file = open(check_file_name, "r")
-            _check_file_content = check_file.read()
-            if _check_file_content.strip() != "":
-                check_file_content = _check_file_content
-            check_file.close()
-
-        check_file_content = json.loads(check_file_content)
+        except Exception as e:
+            return check_file_content
 
         return check_file_content
 

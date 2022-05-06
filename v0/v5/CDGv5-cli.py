@@ -1,4 +1,4 @@
-from CDGv3 import ChessDatabaseGenerator as cdg
+from CDGv5 import ChessDatabaseGenerator as cdg
 import time
 from colorama import Fore, init
 init()
@@ -21,14 +21,18 @@ def help():
     flags:
     -v <level> -> verbose level (0, 1, 2); default 0
     -a <path> -> loads all file .pgn in root
-    -c <check_file_name> -> use sha control file
+    -c <check_file_name> -> use an existed sha control file
+    -d <database_file_name> -> use an existed database file
     -i <input_file_name> -> loads only the input file
     -h -> get help
     -b -> backup database and check file each store
+    -m -> mark file loaded
     
     # Only for -a:
     -l <value > 0> -> load database and check file each <value> add; 0: never, 1: each add, ... 
-    -s <value > 0> -> store database and check file each <value> add; 0: never, 1: each add, ... 
+    -s <value > 0> -> store database and check file each <value> add; 0: never, 1: each add, ...
+    
+    Database Chess Genetor version 0.5.0
 '''
 
     print(message)
@@ -45,7 +49,8 @@ if __name__ == '__main__':
     check_file_name = "check.json"
     load_value = 0
     store_value = 0
-    DATABASE_FILE_NAME = "database.json"
+    mark = False
+    database_file_name = "database.json"
 
     if '-h' in sys.argv:
         help()
@@ -53,8 +58,14 @@ if __name__ == '__main__':
     if '-b' in sys.argv:
         backup = True
 
+    if '-m' in sys.argv:
+        mark = True
+
     if '-c' in sys.argv:
         check_file_name = sys.argv[sys.argv.index('-c')+1]
+
+    if '-d' in sys.argv:
+        database_file_name = sys.argv[sys.argv.index('-d')+1]
 
     if '-i' in sys.argv:
         input_file_name = sys.argv[sys.argv.index('-i')+1]
@@ -79,16 +90,17 @@ if __name__ == '__main__':
 
 
         cd = cdg()
-        cd.load_pgn(input_file_name, verbose)
-        cd.store_games(database_file_name=DATABASE_FILE_NAME, check_file_name=check_file_name, verbose=verbose, backup=backup)
+        cd.load_pgn(input_file_name, mark, verbose)
+        cd.store_games(database_file_name=database_file_name, check_file_name=check_file_name, verbose=verbose, backup=backup)
 
+    # VERSIONE ALL
     elif '-a' in sys.argv:
         path = sys.argv[sys.argv.index('-a')+1] + "/*.pgn"
 
         cd = cdg()
 
         # carico la prima volta i file
-        cd.load_database(database_file_name=DATABASE_FILE_NAME, verbose=verbose)
+        cd.load_database(database_file_name=database_file_name, verbose=verbose)
         cd.load_check_file(check_file_name=check_file_name, verbose=verbose)
 
         index = 0
@@ -119,8 +131,8 @@ if __name__ == '__main__':
             else:
                 store = False
 
-            cd.load_pgn(pgn_file, verbose)
-            added = cd.store_games(database_file_name=DATABASE_FILE_NAME, check_file_name=check_file_name, verbose=verbose, backup=backup, load=load, store=store)
+            cd.load_pgn(pgn_file, mark, verbose)
+            added = cd.store_games(database_file_name=database_file_name, check_file_name=check_file_name, verbose=verbose, backup=backup, load=load, store=store)
             total_new_added += added
 
             if verbose:
@@ -131,7 +143,7 @@ if __name__ == '__main__':
                     print(Fore.LIGHTYELLOW_EX + f"PNG File done: {index}/{l} - {round(100 * index / l, 2)}%" + Fore.RESET, end="")
 
         # store database e check file manuale alla fine del ciclo con annesso backup
-        cd.store(database_file_name=DATABASE_FILE_NAME, check_file_name=check_file_name, verbose=verbose)
+        cd.store(database_file_name=database_file_name, check_file_name=check_file_name, verbose=verbose)
 
     if verbose:
         end = time.time()
