@@ -1,14 +1,12 @@
 import json
 import os
 import hashlib
-import multiprocessing
 from colorama import Fore
 
 class ChessDatabaseGenerator:
-    def __init__(self, multiprocessing_option=False):
+    def __init__(self):
         self.database_file_content = None
         self.check_file_content = None
-        self.multiprocessing_option = multiprocessing_option
         print(Fore.RESET, end="")
 
     def __del__(self):
@@ -19,7 +17,7 @@ class ChessDatabaseGenerator:
         pgn_file = None
 
         try:
-            if verbose and not self.multiprocessing_option:
+            if verbose:
                 print(Fore.RESET + f"\nLoad games from PGN file: {input_pgn_file_name}... ", end="")
 
 
@@ -27,73 +25,74 @@ class ChessDatabaseGenerator:
             pgn_file = file.read()
             file.close()
 
-            if verbose and not self.multiprocessing_option:
+            if verbose:
                 print(Fore.GREEN + "OK" + Fore.RESET)
 
             # se richiesto aggiungo il mark al file
             if mark:
 
-                if verbose and not self.multiprocessing_option:
+                if verbose:
                     print(Fore.RESET + f"Mark PGN file: {input_pgn_file_name}... ", end="")
 
                 os.rename(input_pgn_file_name, input_pgn_file_name + ".done")
 
-                if verbose and not self.multiprocessing_option:
+                if verbose:
                     print(Fore.GREEN + "OK" + Fore.RESET)
 
+                return pgn_file
         except Exception as e:
-            if verbose and not self.multiprocessing_option:
+            if verbose:
                 print(Fore.RED + "ERROR" + Fore.RESET)
-            return None
+            return pgn_file
 
         return pgn_file
 
-    def load_database(self, database_file_name, verbose = False) -> bool:
+    def load_database(self, database_file_name, verbose=False) -> bool:
         try:
-            if verbose and not self.multiprocessing_option:
+            if verbose:
                 print(Fore.RESET + f"\nLoad database: {database_file_name}... ", end="")
 
-            if self.multiprocessing_option:
-                self.database_file_content = multiprocessing.Manager().dict(self.__read_database_file(database_file_name))
-            else:
-                self.database_file_content = self.__read_database_file(database_file_name)
+            self.database_file_content = self.__read_database_file(database_file_name)
 
         except Exception as e:
-            if verbose and not self.multiprocessing_option:
+            if verbose:
                 print(Fore.RED + "ERROR" + Fore.RESET)
             return False
 
-        if verbose and not self.multiprocessing_option:
+        if verbose:
             print(Fore.GREEN + "OK" + Fore.RESET)
 
         return True
 
     def load_check_file(self, check_file_name, verbose = False) -> bool:
         try:
-            if verbose and not self.multiprocessing_option:
+            if verbose:
                 print(Fore.RESET + f"\nLoad check file: {check_file_name}... ", end="")
 
-            if self.multiprocessing_option:
-                self.check_file_content = multiprocessing.Manager().dict(self.__read_check_file(check_file_name))
-            else:
-                self.check_file_content = self.__read_check_file(check_file_name)
+
+            self.check_file_content = self.__read_check_file(check_file_name)
 
         except Exception as e:
-            if verbose and not self.multiprocessing_option:
+            if verbose:
                 print(Fore.RED + "ERROR" + Fore.RESET)
             return False
 
-        if verbose and not self.multiprocessing_option:
+        if verbose:
             print(Fore.GREEN + "OK" + Fore.RESET)
     
     def __read_database_file(self, database_file_name):
-        database_file_content = {}
-        try:
-            if os.path.exists(database_file_name):
-                return json.load(open(database_file_name))
+        database_file_content = '''
+                                    { }
+                                    '''
 
-        except Exception as e:
-            return database_file_content
+        if os.path.exists(database_file_name):
+            db_file = open(database_file_name, "r")
+            _database_file_content = db_file.read()
+            if _database_file_content.strip() != "":
+                database_file_content = _database_file_content
+            db_file.close()
+
+        database_file_content = json.loads(database_file_content)
 
         return database_file_content
 
@@ -113,16 +112,21 @@ class ChessDatabaseGenerator:
 
     def __read_check_file(self, check_file_name):
 
-        check_file_content = {
+        check_file_content = '''
+                                {
                                     "n": 0,
                                     "sha": []
-                             }
-        try:
-            if os.path.exists(check_file_name):
-                return json.load(open(check_file_name))
+                                }
+                                '''
 
-        except Exception as e:
-            return check_file_content
+        if os.path.exists(check_file_name):
+            check_file = open(check_file_name, "r")
+            _check_file_content = check_file.read()
+            if _check_file_content.strip() != "":
+                check_file_content = _check_file_content
+            check_file.close()
+
+        check_file_content = json.loads(check_file_content)
 
         return check_file_content
 
@@ -138,12 +142,7 @@ class ChessDatabaseGenerator:
                 print(f"Backup: {database_backup_file_name}... ", end="")
 
             # salvo le modifiche
-            if self.multiprocessing_option:
-                content = json.dumps(self.database_file_content.copy())
-            else:
-                content = json.dumps(self.database_file_content)
-
-            self.__write_file(file_name=database_backup_file_name, content=content, verbose=False)
+            self.__write_file(database_backup_file_name, json.dumps(self.database_file_content), False)
             if verbose:
                 print(Fore.GREEN + "OK" + Fore.RESET)
 
@@ -154,12 +153,7 @@ class ChessDatabaseGenerator:
             if verbose:
                 print(f"Backup: {check_backup_file_name}... ", end="")
 
-            if self.multiprocessing_option:
-                content = json.dumps(self.check_file_content.copy())
-            else:
-                content = json.dumps(self.check_file_content)
-
-            self.__write_file(check_backup_file_name, content, verbose=False)
+            self.__write_file(check_backup_file_name, json.dumps(self.check_file_content), False)
 
             if verbose:
                 print(Fore.GREEN + "OK" + Fore.RESET)
@@ -169,6 +163,7 @@ class ChessDatabaseGenerator:
                 print(Fore.RED + "ERROR: " + str(e) + Fore.RESET)
 
     def store(self, database_file_name="database.json", check_file_name="check.json", verbose=False, backup=True):
+
         try:
             # se richiesto faccio il backup del file prima di manipolarli
             if backup:
@@ -177,12 +172,7 @@ class ChessDatabaseGenerator:
             if verbose:
                 print(Fore.RESET + f"Store database in {database_file_name}... ", end="")
 
-            if self.multiprocessing_option:
-                content = json.dumps(self.database_file_content.copy())
-            else:
-                content = json.dumps(self.database_file_content)
-
-            self.__write_file(database_file_name, content, False)
+            self.__write_file(database_file_name, json.dumps(self.database_file_content), False)
 
             if verbose:
                 print(Fore.GREEN + "OK" + Fore.RESET)
@@ -190,12 +180,7 @@ class ChessDatabaseGenerator:
             if verbose:
                 print(Fore.RESET + f"Store check sha in {check_file_name}... ", end="")
 
-            if self.multiprocessing_option:
-                content = json.dumps(self.check_file_content.copy())
-            else:
-                content = json.dumps(self.check_file_content)
-
-            self.__write_file(check_file_name, content, False)
+            self.__write_file(check_file_name, json.dumps(self.check_file_content), False)
 
             if verbose:
                 print(Fore.GREEN + "OK" + Fore.RESET)
@@ -233,22 +218,12 @@ class ChessDatabaseGenerator:
         return games
 
     def store_games(self, pgn_file_name, mark=False, database_file_name="database.json", check_file_name="check.json", verbose=0, backup=False, load=True, store=True):
-
         #try:
-
-            # recupera il file pgn
-            pgn_file = self.__load_pgn(input_pgn_file_name=pgn_file_name, mark=mark, verbose=verbose)
-
-            if pgn_file == None:
-                if verbose:
-                    print(Fore.RED + "Error while opening the file" + Fore.RESET)
-
-                return None
-
             if load:
                 self.load_database(database_file_name)
                 self.load_check_file(check_file_name)
 
+            pgn_file = self.__load_pgn(pgn_file_name, mark, verbose)
 
             # se richiesto faccio il backup del file prima di manipolarli
             if store and backup:
@@ -267,17 +242,17 @@ class ChessDatabaseGenerator:
                 sha_game = hashlib.sha1(game.replace(" ", "").encode()).hexdigest()
 
                 if sha_game in self.check_file_content["sha"]:
-                    if verbose and not self.multiprocessing_option:
+                    if verbose:
                         print(Fore.RED + f"{sha_game} is already in the database"  + Fore.RESET, end="")
                         print(f" ({index}/{l} - {round(100 * (index) / l, 2)}%)" + Fore.RESET)
                     continue
 
-                self.check_file_content["sha"] += [sha_game]
+                self.check_file_content["sha"].append(sha_game)
                 self.check_file_content["n"] += 1
                 self.add_to_tree(self.__get_game_handle(game), self.database_file_content, verbose=verbose)
                 added += 1
 
-                if verbose and not self.multiprocessing_option:
+                if verbose:
                     if index == l:
                         print(Fore.GREEN + f"Add to tree... {index}/{l} - {round(100 * index / l, 2)}%" + Fore.RESET)
                     else:
@@ -287,8 +262,6 @@ class ChessDatabaseGenerator:
             if store:
                 self.store(database_file_name=database_file_name, check_file_name=check_file_name, verbose=verbose)
 
-            #if self.multiprocessing_option and verbose:
-            #    print(Fore.RESET + "\nAdded new " + Fore.BLUE + str(added) + Fore.RESET + " games")
 
             return added
 
@@ -345,33 +318,23 @@ class ChessDatabaseGenerator:
             ...
         }
     '''
-    def add_to_tree(self, game, tree, lv=0, verbose=False):
-
-        print(tree)
+    def add_to_tree(self, game, tree={}, lv=0, verbose=False):
 
         if len(game["moves"]) == lv:
             return
         else:
 
-            if verbose == 2 and not self.multiprocessing_option:
+            if verbose == 2:
                 print(f'{lv + 1}/{len(game["moves"])} (move: {game["moves"][lv]})')
 
             # controllo se c'è una mossa nell'albero delle mosse che sia uguale a quella giocata
             if game["moves"][lv] in tree:       # mossa esistente
 
-                print("si")
-
                 # aggiorno i valori di vittoria e partite giocate della mossa nell'albero
                 tree[game["moves"][lv]]["n"] += 1
                 tree[game["moves"][lv]][game["result"]] += 1
 
-                print(Fore.BLUE)
-                print(tree[game["moves"][lv]])
-                print(Fore.RESET)
-
             else:       # non trovando già la mossa nel database, la aggiungo
-
-                print("no")
 
                 tree[game["moves"][lv]] = {         # aggiungo la nuova mossa
                     "move": game["moves"][lv],
@@ -382,28 +345,12 @@ class ChessDatabaseGenerator:
                     "next": {}
                 }
 
-                if self.multiprocessing_option:
-                    m = multiprocessing.Manager()
-                    tree[game["moves"][lv]] = m.dict(tree[game["moves"][lv]])
-
                 # aggiorno i valori di vittoria e partite giocate della mossa nell'albero
                 tree[game["moves"][lv]]["n"] += 1
                 tree[game["moves"][lv]][game["result"]] += 1
 
-            #self.add_to_tree(game, tree[game["moves"][lv]]["next"], lv + 1, verbose)
+            self.add_to_tree(game, tree[game["moves"][lv]]["next"], lv + 1, verbose)
 
-
-    def test(self, a, b="NO", c="NO"):
-        d = multiprocessing.Manager().dict({"e1": a})
-        d["e2"] = multiprocessing.Manager().dict({"e3": b})
-        print(a, b, c)
-        _d = d.copy()
-        print(_d)
-        return 0
-
-
-if __name__ == "__main__":
-    pass
 
 
 '''
